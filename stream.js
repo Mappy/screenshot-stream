@@ -28,6 +28,7 @@ if (opts.userAgent) {
 }
 
 page.settings.resourceTimeout = (opts.timeout || 60) * 1000;
+page.settings.javascriptEnabled = !Boolean(opts.disableJavascript);
 
 phantom.cookies = opts.cookies;
 
@@ -74,25 +75,26 @@ page.open(opts.url, function (status) {
 			height: opts.height
 		};
 	}
+	if (page.settings.javascriptEnabled) {
+		page.evaluate(function (css) {
+			var bgColor = window
+				.getComputedStyle(document.body)
+				.getPropertyValue('background-color');
 
-	page.evaluate(function (css) {
-		var bgColor = window
-			.getComputedStyle(document.body)
-			.getPropertyValue('background-color');
+			if (!bgColor || bgColor === 'rgba(0, 0, 0, 0)') {
+				document.body.style.backgroundColor = 'white';
+			}
 
-		if (!bgColor || bgColor === 'rgba(0, 0, 0, 0)') {
-			document.body.style.backgroundColor = 'white';
-		}
-
-		if (css) {
-			var el = document.createElement('style');
-			el.appendChild(document.createTextNode(css));
-			document.head.appendChild(el);
-		}
-	}, opts.css);
+			if (css) {
+				var el = document.createElement('style');
+				el.appendChild(document.createTextNode(css));
+				document.head.appendChild(el);
+			}
+		}, opts.css);
+	}
 
 	window.setTimeout(function () {
-		if (opts.hide) {
+		if (opts.hide && page.settings.javascriptEnabled) {
 			page.evaluate(function (els) {
 				els.forEach(function (el) {
 					[].forEach.call(document.querySelectorAll(el), function (e) {
@@ -102,7 +104,7 @@ page.open(opts.url, function (status) {
 			}, opts.hide);
 		}
 
-		if (opts.selector) {
+		if (opts.selector && page.settings.javascriptEnabled) {
 			var clipRect = page.evaluate(function (el) {
 				return document
 					.querySelector(el)
@@ -117,7 +119,7 @@ page.open(opts.url, function (status) {
 			page.clipRect = clipRect;
 		}
 
-		if (opts.script) {
+		if (opts.script && page.settings.javascriptEnabled) {
 			page.evaluateJavaScript('function () { ' + opts.script + '}');
 		}
 
